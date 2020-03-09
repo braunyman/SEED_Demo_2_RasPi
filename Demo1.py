@@ -43,14 +43,14 @@ counter = 0;
 calibrateCount = 0;
 
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-objp = np.zeros((6*7,3), np.float32)
-objp[:,:2] = np.mgrid[0:7,0:6].T.reshape(-1,2)
+objp = np.zeros((7*5,3), np.float32)
+objp[:,:2] = np.mgrid[0:7,0:5].T.reshape(-1,2)
 objpoints = [] # 3d point in real world space
 imgpoints = [] # 2d points in image plane.
 """
 MAIN LOOP
 """
-while(calibrateCount < 10):
+while(calibrateCount < 15):
     camera.capture(rawCapture, format='bgr');
     image = rawCapture.array;
     rawCapture.truncate(0);
@@ -58,26 +58,38 @@ while(calibrateCount < 10):
         cv2.imshow("Text",image);
         if(cv2.waitKey(1) > 0):
             break;
-    print(counter);
     gray = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
-    ret, corners = cv2.findChessboardCorners(gray, (7,4),None)
+    ret, corners = cv2.findChessboardCorners(gray, (7,5),None)
     if ret == True:
         objpoints.append(objp)
         cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
         imgpoints.append(corners)
-        cv2.drawChessboardCorners(image, (7,4), corners,ret)
+        cv2.drawChessboardCorners(image, (7,5), corners,ret)
         cv2.imshow('img',image)
         cv2.waitKey(500)
         calibrateCount = calibrateCount + 1;
         print(">",calibrateCount);
-    
-    counter = counter + 1;
+    else:
+        #cv2.imshow('img',image)
+        #cv2.waitKey(500);
+        pass;
 camera.capture(rawCapture, format='bgr');
 image = rawCapture.array;
 gray = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY);
-ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, (864,480));
+print(len(objpoints[0]),len(imgpoints[0]));
+ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None);
+#print(type(ret));
+#print(type(mtx));
+#print(type(dist));
+#print(type(rvecs));
+#print(type(tvecs));
+#np.savetxt('ret.dat',np.array(ret),delimiter=',');
 print("ret:",ret);
-print("mtx:",mtx);
-print("dist:",dist);
-print("rvecs:",rvecs);
-print("tvecs:",tvecs);
+np.savetxt('mtx.dat',mtx,delimiter=',');
+#print("mtx:",mtx);
+np.savetxt('dist.dat',dist,delimiter=',');
+#print("dist:",dist);
+np.savetxt('rvecs.dat',np.array(rvecs),delimiter=',');
+#print("rvecs:",rvecs);
+np.savetxt('tvecs.dat',np.array(tvecs),delimiter=',');
+#print("tvecs:",tvecs);

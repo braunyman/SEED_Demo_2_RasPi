@@ -26,22 +26,24 @@ maxSamples = 5;
 STATE MACHINE FUNCS
 """
 def state0(image):
-    #LOOKING FOR MARKER
+    #Searching
     global aruco_dict, parameters;
     corners, ids, rejectedImgPoints = aruco.detectMarkers(image, aruco_dict, parameters = parameters);
     if(ids is not None):
-        return st_dict("Marker Found");
+        return st_dict.get("Found");
     else:
-        return st_dict("Looking For Marker");
+        return st_dict.get("Searching");
         
 def state1(image):
-    #MARKER FOUND
+    #Found
     global aruco_dict, parameters, newcameramtx, sampleDist, sampleAngle, finalDist, finalAngle;
     corners, ids, rejectedImgPoints = aruco.detectMarkers(image, aruco_dict, parameters = parameters);
     if(len(sampleDist) > maxSamples):
         finalDist = sum(sampleDist) / len(sampleDist);
         finalAngle = sum(sampleAngle) / len(sampleAngle);
-        return st_dict("Approaching");
+        print("Final calculated distance:",finalDist);
+        print("Final calculated angle:",finalAngle);
+        return st_dict.get("Approaching");
     if(ids is not None):
         pose_rvecs, pose_tvecs, pose_obj_points = aruco.estimatePoseSingleMarkers(corners, 2.40157 , newcameramtx, None, None);
         for i in range(len(pose_tvecs)):
@@ -50,9 +52,10 @@ def state1(image):
             #Vector has components (x,z,y), sorta
             xComp = vec[0];
             xComp = xComp - (xComp / 12) - 1.5;
+            #adjustment factor
             yComp = vec[2];
             yComp = yComp - ((yComp - 12) / 12);
-            #The Aruco distances seem to lose about an inch per foot, past the first foot, so this fixes that
+            #adjustment factor
             markerDist = sqrt( pow(xComp,2) + pow(yComp,2));
             strDist = '%.2f' % markerDist;
             markerAngle = atan2(yComp,xComp) * ((360.0)/(2.0*np.pi)) - 90;
@@ -60,47 +63,52 @@ def state1(image):
             #print("Vector",i,"Is a distance away of ", markerDist,"cm and at an angle of", markerAngle, "radians");
             sampleAngle.append(markerAngle);
             sampleDist.append(markerDist);
-            return st_dict("Marker Found");
+            return st_dict.get("Found");
     else:
-        return st_dict("Looking For Marker");
+        sampleAngle.clear();
+        sampleDist.clear();
+        return st_dict.get("Searching");
         
 def state2(image):
     #APPROACHING
     print("TODO: Approaching Function");
-    return st_dict("Done");
+    return st_dict.get("Done");
 def state3(image):
     #CIRCLING
     print("TODO: Circling Function");
-    return st_dict("Done");
+    return st_dict.get("Done");
 def state4(image):
-    #FINAL APPROACH
-    print("TODO: Final Approach Function");
-    return st_dict("Done");
+    #Refine
+    print("TODO: Refine Function");
+    return st_dict.get("Done");
 def state5(image):
     #DONE
     print("YEET");
-    return st_dict("Done");
+    return st_dict.get("Done");
     
 # create a dictionary to describe the states
+func_dict = {
+    state0 : 'Searching',
+    state1 : 'Found',
+    state2 : 'Approaching',
+    state3 : 'Circling',
+    state4 : 'Refine',
+    state5 : 'Done'
+}
 st_dict = {
-    state0 : "Looking For Marker",
-    state1 : "Marker Found",
-    state2 : "Approaching",
-    state3 : "Circling",
-    state4 : "Final Approach",
-    state5 : "Done"
-    }
-
-# initalization of actual state machine
-
-state = state0 # initial state as pointer to state0 function
-inputStr = input("Type a string to start the state machine")
+    'Searching' : state0,
+    'Found' : state1,
+    'Approaching' : state2,
+    'Circling' : state3,
+    'Refine' : state4,
+    'Done' : state5
+}
 
 """
 INITIALIZATION
 """
-state = st_dict("Looking For Marker");
-
+state = st_dict.get('Searching');
+#print(state);
 #A cool global variable that I am using cause python doesn't do static vars outside of clases
 sampleAngle = [];
 sampleDist = [];
@@ -168,8 +176,10 @@ for frame in camera.capture_continuous(rawCapture, format = 'bgr', use_video_por
     
     if(DisplayPics):
         cv2.imshow("Text",np.hstack([image,dst]));
+    #print(st_dict);
+    print("Current state is",func_dict.get(state));
     new_state = state(image)
-    if state == st_dict("Done")
+    if state == st_dict.get("Done"):
         break;
     state = new_state
 #state machine is finished.

@@ -92,7 +92,7 @@ def state2(image):
         time.sleep(0.1);
     #time.sleep(10);
     
-    bus.write_i2c_block_data(69, 5, bytearray(struct.pack("f", (finalDist - 16.0)*0.0254)));
+    bus.write_i2c_block_data(69, 5, bytearray(struct.pack("f", (finalDist - 22.0)*0.0254)));
     sz = 999;
     while(sz > 0):
         bus.write_byte(69,10);
@@ -104,7 +104,7 @@ def state3(image):
     angle = 360.0;
     radius = 16.0;
     bus.write_i2c_block_data(69, 6, bytearray(struct.pack("f", ((-90.0 * 2.0 * np.pi) / 360.0))));
-    bus.write_i2c_block_data(69, 7, bytearray(struct.pack("f", 3.14*0.5)+struct.pack("f", 6.28)))
+    bus.write_i2c_block_data(69, 7, bytearray(struct.pack("f", (angle * 2.0 * np.pi * (radius * 0.0254)) / 360.0)+struct.pack("f", (angle*2.0*np.pi) / 360.0)));
     sz = 999;
     #print("TODO: Circling Function");
     return st_dict.get("Done");

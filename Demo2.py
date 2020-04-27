@@ -13,13 +13,15 @@ import busio
 import board
 import adafruit_character_lcd.character_lcd_rgb_i2c as character_lcd
 from math import *
+from smbus2 import SMBus
+import struct
 
 """
 DEBUG PARAMETERS
 """
 DisplayPics = True;
 SavePics = False;
-LCD_Enabled = True;
+LCD_Enabled = False;
 maxSamples = 5;
 #Number of distance samples before moving to circle
 """
@@ -27,9 +29,17 @@ STATE MACHINE FUNCS
 """
 def state0(image):
     #Searching
-    global aruco_dict, parameters;
+    global aruco_dict, parameters, bus;
+    try:
+        bus.write_byte(69,10);
+        sz = bus.read_byte(69,1);
+        if(sz == 0):
+            bus.write_i2c_block_data(69, 6, bytearray(struct.pack("f", 0.48869219055)));
+    except TypeError:
+        pass;
     corners, ids, rejectedImgPoints = aruco.detectMarkers(image, aruco_dict, parameters = parameters);
     if(ids is not None):
+        bus.write_byte(69, 1);
         return st_dict.get("Found");
     else:
         return st_dict.get("Searching");
@@ -71,11 +81,32 @@ def state1(image):
         
 def state2(image):
     #APPROACHING
-    print("TODO: Approaching Function");
-    return st_dict.get("Done");
+    #print("TODO: Approaching Function");
+    #Turn towards finalAngle
+    bus.write_i2c_block_data(69, 6, bytearray(struct.pack("f", ((finalAngle * 2.0 * np.pi) / 360.0))));
+    #Move towards finalPos
+    sz = 999;
+    while(sz > 0):
+        bus.write_byte(69,10);
+        sz = bus.read_byte(69,1);
+        time.sleep(0.1);
+    #time.sleep(10);
+    
+    bus.write_i2c_block_data(69, 5, bytearray(struct.pack("f", (finalDist - 22.0)*0.0254)));
+    sz = 999;
+    while(sz > 0):
+        bus.write_byte(69,10);
+        sz = bus.read_byte(69,1);
+        time.sleep(0.1);
+    return st_dict.get("Circling");
 def state3(image):
     #CIRCLING
-    print("TODO: Circling Function");
+    angle = 360.0;
+    radius = 16.0;
+    bus.write_i2c_block_data(69, 6, bytearray(struct.pack("f", ((-90.0 * 2.0 * np.pi) / 360.0))));
+    bus.write_i2c_block_data(69, 7, bytearray(struct.pack("f", (angle * 2.0 * np.pi * (radius * 0.0254)) / 360.0)+struct.pack("f", (angle*2.0*np.pi) / 360.0)));
+    sz = 999;
+    #print("TODO: Circling Function");
     return st_dict.get("Done");
 def state4(image):
     #Refine
@@ -107,6 +138,11 @@ st_dict = {
 """
 INITIALIZATION
 """
+
+counterSend = 0;
+
+bus = SMBus(1);
+
 state = st_dict.get('Searching');
 #print(state);
 #A cool global variable that I am using cause python doesn't do static vars outside of clases
@@ -183,3 +219,4 @@ for frame in camera.capture_continuous(rawCapture, format = 'bgr', use_video_por
         break;
     state = new_state
 #state machine is finished.
+bus.close();
